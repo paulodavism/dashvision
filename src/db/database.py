@@ -1,13 +1,13 @@
-from sqlmodel import Session, create_engine
+from sqlmodel import SQLModel, Session, create_engine
 from dotenv import load_dotenv
 import os
 from urllib.parse import urlparse
 from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker, clear_mappers
+from sqlalchemy.orm import sessionmaker
 import logging
 import pandas as pd
 from datetime import datetime
-from .models import Base, EstoqueMercos, ConciliacaoMercos
+from .models import EstoqueMercos, ConciliacaoMercos, Estoque, Produto, Deposito
 from sqlalchemy.sql import delete, select
 
 logger = logging.getLogger(__name__)
@@ -34,15 +34,12 @@ def create_database_engine():
     ssl_mode = 'require'  # Ou 'verify-full' dependendo da sua necessidade
     return create_engine(database_url, echo=True, connect_args={'sslmode': ssl_mode})
 
-# Limpa todos os mappers antigos antes de criar novos
-clear_mappers()
-
 # Engine global
 engine = create_database_engine()
 
 def init_db():
     """Cria todas as tabelas no banco de dados"""
-    Base.metadata.create_all(engine)
+    SQLModel.metadata.create_all(engine)
 
 def get_session():
     """
@@ -60,7 +57,7 @@ class DatabaseManager:
     def _create_tables(self):
         """Cria as tabelas necessárias se não existirem"""
         # Cria todas as tabelas definidas nos modelos
-        Base.metadata.create_all(self.engine)
+        SQLModel.metadata.create_all(self.engine)
         logger.info("Todas as tabelas foram criadas/atualizadas com sucesso")
 
     def salvar_estoque_mercos(self, df: pd.DataFrame) -> None:

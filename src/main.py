@@ -135,9 +135,9 @@ def carregar_estoque_interno():
             
             # 2. Padronizar nomes das colunas
             df_filtrado.rename(columns={'sku_ml_amazon': 'SKU',
-                                      'produto': 'Produto',
-                                      'deposito_mercos': 'Depósito',
-                                      'estoque_mercos': 'Estoque'}, inplace=True)
+                                    'produto': 'Produto',
+                                    'deposito_mercos': 'Depósito',
+                                    'estoque_mercos': 'Estoque'}, inplace=True)
             
             # 3. Verificar se houve atualização de estoque
             for index_mercos, reg_mercos in df_mercos.iterrows():
@@ -497,7 +497,7 @@ def exibir_gestao_estoque():
                 confirm_container.empty()
                 st.session_state.confirmacao_ativa = False
                 st.rerun()
-                                                                   
+                                                                
         exibir_tabela_mercos()
 
     elif menu_opcao == "Conciliar SKUs":
