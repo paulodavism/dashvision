@@ -1,0 +1,25 @@
+# Ignorar o ambiente virtual
+venv/
+
+# Ignorar arquivos gerados pelo Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de log
+*.log
+
+# Arquivos de configuração de ambiente
+.env
+
+# Arquivos de configuração do VS Code
+.vscode/
+
+# Outras pastas e arquivos desnecessários
+build/
+dist/
+*.egg-info/
+
+# Test cache
+.pytest_cache/
