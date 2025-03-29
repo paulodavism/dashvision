@@ -11,6 +11,8 @@ class TipoEstoque(str, Enum):
     BALANCO = "Balanço"
 
 class Deposito(SQLModel, table=True):
+    __table_args__ = {'extend_existing': True}
+    
     id: Optional[int] = Field(default=None, primary_key=True)
     nome: str = Field(index=True, unique=True, max_length=100)
     tipo: str = Field(default="Próprio", max_length=50)
@@ -19,6 +21,8 @@ class Deposito(SQLModel, table=True):
     estoques: List["Estoque"] = Relationship(back_populates="deposito")
 
 class Produto(SQLModel, table=True):
+    __table_args__ = {'extend_existing': True}
+    
     sku: str = Field(primary_key=True, max_length=50)
     nome: str = Field(index=True, max_length=200)
     descricao: Optional[str] = Field(default=None, max_length=500)
@@ -26,6 +30,8 @@ class Produto(SQLModel, table=True):
     estoques: List["Estoque"] = Relationship(back_populates="produto")
 
 class Estoque(SQLModel, table=True):
+    __table_args__ = {'extend_existing': True}
+    
     id: Optional[int] = Field(default=None, primary_key=True)
     sku: str = Field(foreign_key="produto.sku")
     deposito_id: int = Field(foreign_key="deposito.id")
@@ -43,6 +49,7 @@ class Estoque(SQLModel, table=True):
 
 class EstoqueMercos(SQLModel, table=True):
     __tablename__ = "estoque_mercos"
+    __table_args__ = {'extend_existing': True}
     
     id: Optional[int] = Field(default=None, primary_key=True)
     sku: str = Field(max_length=50)
@@ -55,6 +62,7 @@ class EstoqueMercos(SQLModel, table=True):
 
 class ConciliacaoMercos(SQLModel, table=True):
     __tablename__ = "conciliacao_mercos"
+    __table_args__ = {'extend_existing': True}
 
     id: Optional[int] = Field(default=None, primary_key=True)
     sku_mercos: str = Field(max_length=50)
