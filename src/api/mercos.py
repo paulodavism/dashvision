@@ -1,11 +1,9 @@
-from selenium import webdriver
+import undetected_chromedriver as uc
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -28,25 +26,31 @@ class MercosWebScraping:
     def __init__(self):
         self.df_filtrado = pd.DataFrame()
         self._setup_chrome_options()
+        self.driver = None
 
     def _setup_chrome_options(self):
-        """Configura as opções do Chrome de forma compatível com Windows e Linux"""
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        chrome_options.add_experimental_option("useAutomationExtension", False)
+        """Configura as opções do Chrome para ambiente cloud"""
+        options = uc.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument("--disable-gpu")
+        options.add_argument('--disable-infobars')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-popup-blocking')
+        options.add_argument('--disable-blink-features=AutomationControlled')
         
-        # User agent específico para cada sistema operacional
-        if platform.system() == "Windows":
-            chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-        else:
-            chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-        
-        self.chrome_options = chrome_options
+        self.chrome_options = options
+
+    def _initialize_driver(self):
+        """Inicializa o driver usando undetected-chromedriver"""
+        try:
+            self.driver = uc.Chrome(options=self.chrome_options)
+            logger.info("WebDriver inicializado com sucesso")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao inicializar WebDriver: {e}")
+            return False
 
     def _login(self, driver):
         """Realiza o login no Mercos"""
@@ -171,18 +175,16 @@ class MercosWebScraping:
         load_dotenv()
 
         try:
-            # Inicializar o ChromeDriver usando webdriver-manager
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=self.chrome_options)
-            logger.info("WebDriver inicializado com sucesso")
-
-            if not self._login(driver):
+            if not self._initialize_driver():
                 return pd.DataFrame()
 
-            if not self._navegar_para_produtos(driver):
+            if not self._login(self.driver):
                 return pd.DataFrame()
 
-            produtos = self._extrair_dados_produtos(driver)
+            if not self._navegar_para_produtos(self.driver):
+                return pd.DataFrame()
+
+            produtos = self._extrair_dados_produtos(self.driver)
             
             if produtos:
                 df = pd.DataFrame(produtos)
@@ -205,7 +207,11 @@ class MercosWebScraping:
             self.df_filtrado = pd.DataFrame()
 
         finally:
-            driver.quit()
+            if self.driver:
+                try:
+                    self.driver.quit()
+                except:
+                    pass
             tempo_total = time.time() - start_time
             logger.info(f"Tempo total do processo: {tempo_total:.2f} segundos")
 
