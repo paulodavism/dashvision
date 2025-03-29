@@ -1,9 +1,13 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, registry
 from typing import Optional
 from datetime import datetime
 from sqlalchemy import Column, TIMESTAMP, text
 
-class EstoqueMercos(SQLModel, table=True):
+# Criar um registro explícito para evitar conflitos
+mapper_registry = registry()
+Base = mapper_registry.generate_base()
+
+class EstoqueMercos(Base, table=True):
     __tablename__ = "estoque_mercos"
     __table_args__ = {'extend_existing': True}
     
@@ -16,7 +20,7 @@ class EstoqueMercos(SQLModel, table=True):
         sa_column=Column(TIMESTAMP(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
     )
 
-class ConciliacaoMercos(SQLModel, table=True):
+class ConciliacaoMercos(Base, table=True):
     __tablename__ = "conciliacao_mercos"
     __table_args__ = {'extend_existing': True}
 
