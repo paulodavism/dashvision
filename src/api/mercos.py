@@ -40,12 +40,25 @@ class MercosWebScraping:
         options.add_argument('--disable-popup-blocking')
         options.add_argument('--disable-blink-features=AutomationControlled')
         
+        # Configurar o caminho do Chrome no ambiente cloud
+        if platform.system() == "Linux":
+            options.binary_location = "/usr/bin/google-chrome"
+        
         self.chrome_options = options
 
     def _initialize_driver(self):
         """Inicializa o driver usando undetected-chromedriver"""
         try:
-            self.driver = uc.Chrome(options=self.chrome_options)
+            if platform.system() == "Linux":
+                # No Linux (Streamlit Cloud), especificar o caminho do ChromeDriver
+                self.driver = uc.Chrome(
+                    options=self.chrome_options,
+                    driver_executable_path="/home/appuser/.local/share/undetected_chromedriver/undetected_chromedriver"
+                )
+            else:
+                # Em outros sistemas, usar configuração padrão
+                self.driver = uc.Chrome(options=self.chrome_options)
+                
             logger.info("WebDriver inicializado com sucesso")
             return True
         except Exception as e:
