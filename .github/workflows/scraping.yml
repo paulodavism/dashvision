@@ -28,53 +28,47 @@ jobs:
           sudo apt update
           sudo apt install -y google-chrome-stable
 
-      - name: Install Chromedriver
+      - name: Install correct ChromeDriver version
         run: |
           # Obter a versão do Chrome instalado
-          CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }')
+          CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1)
           echo "Chrome version: $CHROME_VERSION"
           
-          # Obter a versão mais recente do ChromeDriver
-          LATEST_CHROMEDRIVER=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE")
-          echo "Latest ChromeDriver version: $LATEST_CHROMEDRIVER"
+          # Obter a versão mais recente do ChromeDriver compatível com o Chrome instalado
+          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+          echo "Compatible ChromeDriver version: $CHROMEDRIVER_VERSION"
           
           # Baixar o ChromeDriver
-          wget -O chromedriver_linux64.zip "https://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER/chromedriver_linux64.zip"
-          
-          # Verificar se o download foi bem-sucedido
-          if [ ! -f chromedriver_linux64.zip ]; then
-            echo "Falha no download do ChromeDriver"
-            exit 1
-          fi
+          wget -O chromedriver_linux64.zip "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
           
           # Descompactar o ChromeDriver
           unzip chromedriver_linux64.zip
           
-          # Verificar se o arquivo chromedriver existe
-          if [ ! -f chromedriver ]; then
-            echo "Falha na extração do ChromeDriver"
-            exit 1
-          fi
+          # Remover qualquer versão existente do ChromeDriver
+          sudo rm -f /usr/local/bin/chromedriver
           
-          # Adicionar o ChromeDriver ao PATH
+          # Mover o novo ChromeDriver para o PATH
           sudo mv chromedriver /usr/local/bin/chromedriver
           sudo chmod +x /usr/local/bin/chromedriver
           
           # Verificar a instalação
           chromedriver --version
-          
-          echo "ChromeDriver instalado com sucesso"
 
       - name: Configure Selenium to use ChromeDriver
         run: |
           echo "from selenium import webdriver" > configure_chrome.py
           echo "from selenium.webdriver.chrome.options import Options" >> configure_chrome.py
+          echo "from selenium.webdriver.chrome.service import Service" >> configure_chrome.py
           echo "chrome_options = Options()" >> configure_chrome.py
           echo "chrome_options.add_argument('--headless')" >> configure_chrome.py
           echo "chrome_options.add_argument('--no-sandbox')" >> configure_chrome.py
           echo "chrome_options.add_argument('--disable-dev-shm-usage')" >> configure_chrome.py
-          echo "driver = webdriver.Chrome(options=chrome_options)" >> configure_chrome.py
+          echo "service = Service('/usr/local/bin/chromedriver')" >> configure_chrome.py
+          echo "driver = webdriver.Chrome(service=service, options=chrome_options)" >> configure_chrome.py
           echo "print('Selenium configurado com sucesso')" >> configure_chrome.py
+          echo "print('Chrome version:', driver.capabilities['browserVersion'])" >> configure_chrome.py
+          echo "print('ChromeDriver version:', driver.capabilities['chrome']['chromedriverVersion'])" >> configure_chrome.py
+          echo "driver.quit()" >> configure_chrome.py
           python configure_chrome.py
 
       - name: Run scraping script
