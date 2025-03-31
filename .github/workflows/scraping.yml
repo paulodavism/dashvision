@@ -8,38 +8,52 @@ on:
 jobs:
   run-scraping:
     runs-on: ubuntu-latest
-    container:
-      image: selenium/standalone-chrome:latest
-      options: --user root  # Usar o usuário root no container
 
     steps:
-      # Passo 1: Checkout do código
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Passo 2: Configurar Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # Passo 3: Criar e ativar ambiente virtual
-      - name: Create virtual environment
-        run: |
-          python -m venv venv
-          echo "source venv/bin/activate" >> $GITHUB_PATH  # Adicionar o ambiente virtual ao PATH
-
-      # Passo 4: Instalar dependências
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Passo 5: Executar o script
+      - name: Install Google Chrome
+        run: |
+          sudo apt update
+          sudo apt install -y google-chrome-stable
+
+      - name: Install Chromedriver
+        run: |
+          # Obter a versão do Chrome instalado
+          CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1-3)
+          
+          # Baixar o ChromeDriver compatível
+          wget -q -O - https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION} > chromedriver_version.txt
+          CHROMEDRIVER_VERSION=$(cat chromedriver_version.txt)
+          wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
+          
+          # Descompactar o Chromedriver
+          unzip chromedriver_linux64.zip
+          
+          # Adicionar o Chromedriver ao PATH
+          sudo mv chromedriver /usr/local/bin/chromedriver
+          sudo chmod +x /usr/local/bin/chromedriver
+
+      - name: Check versions
+        run: |
+          google-chrome --version
+          chromedriver --version          
+
       - name: Run scraping script
         env:
           MERCOS_EMAIL: ${{ secrets.MERCOS_EMAIL }}
           MERCOS_SENHA: ${{ secrets.MERCOS_SENHA }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          chmod -R 777 /__w  # Ajustar permissões do diretório de trabalho
-          python src/api/mercos_github.py
+          python mercos_github.py
