@@ -469,8 +469,8 @@ def exibir_gestao_estoque():
             st.session_state.confirmacao_ativa = False
 
         # Botão principal para iniciar o processo de atualização
-        if st.button("🔄 Atualizar Dados", help="Obter dados do sistema Mercos"):
-            st.session_state.confirmacao_ativa = True
+        #if st.button("🔄 Atualizar Dados", help="Obter dados do sistema Mercos"):
+        #    st.session_state.confirmacao_ativa = True
 
         # Exibe a mensagem de confirmação se a flag estiver ativa
         if st.session_state.confirmacao_ativa:

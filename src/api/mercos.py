@@ -1,11 +1,11 @@
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, WebDriverException
-from webdriver_manager.firefox import GeckoDriverManager
+from selenium.common.exceptions import TimeoutException
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -27,24 +27,26 @@ logger = logging.getLogger(__name__)
 class MercosWebScraping:
     def __init__(self):
         self.df_filtrado = pd.DataFrame()
-        self._setup_firefox_options()
+        self._setup_chrome_options()
 
-    def _setup_firefox_options(self):
-        """Configura as opções do Firefox de forma compatível com Windows e Linux"""
-        firefox_options = Options()
-        firefox_options.add_argument("--headless")
-        firefox_options.add_argument("--no-sandbox")
-        firefox_options.add_argument("--disable-dev-shm-usage")
-        firefox_options.add_argument("--disable-gpu")
-        firefox_options.add_argument("--window-size=1920,1080")
+    def _setup_chrome_options(self):
+        """Configura as opções do Chrome de forma compatível com Windows e Linux"""
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option("useAutomationExtension", False)
         
         # User agent específico para cada sistema operacional
         if platform.system() == "Windows":
-            firefox_options.add_argument("-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0")
+            chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
         else:
-            firefox_options.add_argument("-user-agent=Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0")
+            chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
         
-        self.firefox_options = firefox_options
+        self.chrome_options = chrome_options
 
     def _login(self, driver):
         """Realiza o login no Mercos"""
@@ -169,16 +171,9 @@ class MercosWebScraping:
         load_dotenv()
 
         try:
-            if platform.system() == "Linux" and os.getenv("STREAMLIT_CLOUD") == "true":
-                # Configuração específica para Streamlit Cloud
-                os.system('sbase install geckodriver')
-                os.system('ln -s /home/appuser/venv/lib/python3.7/site-packages/seleniumbase/drivers/geckodriver /home/appuser/venv/bin/geckodriver')
-                driver = webdriver.Firefox(options=self.firefox_options)
-            else:
-                # Configuração para ambiente local
-                service = Service(GeckoDriverManager().install())
-                driver = webdriver.Firefox(service=service, options=self.firefox_options)
-            
+            # Inicializar o ChromeDriver usando webdriver-manager
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=self.chrome_options)
             logger.info("WebDriver inicializado com sucesso")
 
             if not self._login(driver):
