@@ -31,37 +31,15 @@ jobs:
       - name: Install Chromedriver
         run: |
           # Obter a versão do Chrome instalado
-          CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1-3)
+          CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }')
           echo "Chrome version: $CHROME_VERSION"
           
-          # Função para verificar se uma versão do ChromeDriver existe
-          check_chromedriver_version() {
-            curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$1" | grep -q "NoSuchKey"
-            return $?
-          }
-          
-          # Encontrar a versão compatível mais próxima do ChromeDriver
-          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f1)
-          MINOR_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f2)
-          PATCH_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f3)
-          
-          while check_chromedriver_version "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}"; do
-            if [ $PATCH_VERSION -gt 0 ]; then
-              PATCH_VERSION=$((PATCH_VERSION-1))
-            elif [ $MINOR_VERSION -gt 0 ]; then
-              MINOR_VERSION=$((MINOR_VERSION-1))
-              PATCH_VERSION=99
-            else
-              echo "Não foi possível encontrar uma versão compatível do ChromeDriver"
-              exit 1
-            fi
-          done
-          
-          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
-          echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+          # Obter a versão mais recente do ChromeDriver
+          LATEST_CHROMEDRIVER=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE")
+          echo "Latest ChromeDriver version: $LATEST_CHROMEDRIVER"
           
           # Baixar o ChromeDriver
-          wget -O chromedriver_linux64.zip "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
+          wget -O chromedriver_linux64.zip "https://chromedriver.storage.googleapis.com/$LATEST_CHROMEDRIVER/chromedriver_linux64.zip"
           
           # Verificar se o download foi bem-sucedido
           if [ ! -f chromedriver_linux64.zip ]; then
@@ -83,7 +61,21 @@ jobs:
           sudo chmod +x /usr/local/bin/chromedriver
           
           # Verificar a instalação
-          chromedriver --version       
+          chromedriver --version
+          
+          echo "ChromeDriver instalado com sucesso"
+
+      - name: Configure Selenium to use ChromeDriver
+        run: |
+          echo "from selenium import webdriver" > configure_chrome.py
+          echo "from selenium.webdriver.chrome.options import Options" >> configure_chrome.py
+          echo "chrome_options = Options()" >> configure_chrome.py
+          echo "chrome_options.add_argument('--headless')" >> configure_chrome.py
+          echo "chrome_options.add_argument('--no-sandbox')" >> configure_chrome.py
+          echo "chrome_options.add_argument('--disable-dev-shm-usage')" >> configure_chrome.py
+          echo "driver = webdriver.Chrome(options=chrome_options)" >> configure_chrome.py
+          echo "print('Selenium configurado com sucesso')" >> configure_chrome.py
+          python configure_chrome.py
 
       - name: Run scraping script
         env:
