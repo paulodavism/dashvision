@@ -1,51 +1,30 @@
 name: Web Scraping Job
 
 on:
-  push:  # Executa sempre que você fizer um push no repositório
+  push:
     branches:
-      - main  # Altere para o nome da sua branch principal, se necessário
+      - main
 
 jobs:
   run-scraping:
     runs-on: ubuntu-latest
+    container:
+      image: selenium/standalone-chrome:latest  # Imagem com Chrome e Chromedriver compatíveis
 
     steps:
-      # Passo 1: Fazer checkout do código
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Passo 2: Configurar Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # Passo 3: Instalar dependências
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Passo 4: Instalar o Google Chrome
-      - name: Install Google Chrome
-        run: |
-          # Instalar Chrome 116 (versão conhecida e estável)
-          wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_116.0.5845.96-1_amd64.deb
-          sudo apt install -y ./google-chrome-stable_116.0.5845.96-1_amd64.deb
-
-      # Passo 5: Instalar o Chromedriver
-      - name: Install Chromedriver
-        run: |
-          # Baixar Chromedriver 116
-          CHROMEDRIVER_VERSION="116.0.5845.96"
-          wget https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
-          
-          # Descompactar e configurar
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/chromedriver
-          sudo chmod +x /usr/local/bin/chromedriver
-
-      # Passo 6: Executar o script de web scraping
       - name: Run scraping script
         env:
           MERCOS_EMAIL: ${{ secrets.MERCOS_EMAIL }}
