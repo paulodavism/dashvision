@@ -29,29 +29,18 @@ jobs:
       # Passo 4: Instalar o Google Chrome
       - name: Install Google Chrome
         run: |
-          # Instalar uma versão estável do Chrome (ex.: 114)
-          sudo apt update
-          sudo apt install -y wget
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb
-          sudo apt --fix-broken install -y
+          # Instalar Chrome 116 (versão conhecida e estável)
+          wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_116.0.5845.96-1_amd64.deb
+          sudo apt install -y ./google-chrome-stable_116.0.5845.96-1_amd64.deb
 
       # Passo 5: Instalar o Chromedriver
       - name: Install Chromedriver
         run: |
-          # Obter a versão principal do Chrome instalado
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
-          CHROME_VERSION_SHORT=$(echo $CHROME_VERSION | cut -d '.' -f -3)
+          # Baixar Chromedriver 116
+          CHROMEDRIVER_VERSION="116.0.5845.96"
+          wget https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
           
-          # Buscar a versão mais recente do Chromedriver compatível
-          CHROMEDRIVER_RELEASE_URL="https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION_SHORT"
-          CHROMEDRIVER_VERSION=$(curl -s $CHROMEDRIVER_RELEASE_URL)
-          
-          # Corrigir URL para evitar caracteres especiais
-          CHROMEDRIVER_DOWNLOAD_URL="https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
-          
-          # Baixar e configurar o Chromedriver
-          wget $CHROMEDRIVER_DOWNLOAD_URL
+          # Descompactar e configurar
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/chromedriver
           sudo chmod +x /usr/local/bin/chromedriver
