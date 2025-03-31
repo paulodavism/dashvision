@@ -32,23 +32,36 @@ jobs:
         run: |
           # Obter a versão do Chrome instalado
           CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1-3)
+          echo "Chrome version: $CHROME_VERSION"
           
-          # Baixar o ChromeDriver compatível
-          wget -q -O - https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION} > chromedriver_version.txt
-          CHROMEDRIVER_VERSION=$(cat chromedriver_version.txt)
-          wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
+          # Determinar a versão mais recente do ChromeDriver compatível
+          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+          echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
           
-          # Descompactar o Chromedriver
+          # Baixar o ChromeDriver
+          wget -O chromedriver_linux64.zip "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
+          
+          # Verificar se o download foi bem-sucedido
+          if [ ! -f chromedriver_linux64.zip ]; then
+            echo "Falha no download do ChromeDriver"
+            exit 1
+          fi
+          
+          # Descompactar o ChromeDriver
           unzip chromedriver_linux64.zip
           
-          # Adicionar o Chromedriver ao PATH
+          # Verificar se o arquivo chromedriver existe
+          if [ ! -f chromedriver ]; then
+            echo "Falha na extração do ChromeDriver"
+            exit 1
+          fi
+          
+          # Adicionar o ChromeDriver ao PATH
           sudo mv chromedriver /usr/local/bin/chromedriver
           sudo chmod +x /usr/local/bin/chromedriver
-
-      - name: Check versions
-        run: |
-          google-chrome --version
-          chromedriver --version          
+          
+          # Verificar a instalação
+          chromedriver --version         
 
       - name: Run scraping script
         env:
