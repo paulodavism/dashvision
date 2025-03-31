@@ -27,13 +27,11 @@ jobs:
       - name: Create virtual environment
         run: |
           python -m venv venv
-          source venv/bin/activate
-          python -m pip install --upgrade pip
+          echo "source venv/bin/activate" >> $GITHUB_PATH  # Adicionar o ambiente virtual ao PATH
 
       # Passo 4: Instalar dependências
       - name: Install dependencies
         run: |
-          source venv/bin/activate
           pip install -r requirements.txt
 
       # Passo 5: Executar o script
@@ -44,5 +42,4 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           chmod -R 777 /__w  # Ajustar permissões do diretório de trabalho
-          source venv/bin/activate
           python src/api/mercos_github.py
