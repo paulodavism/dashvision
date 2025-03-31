@@ -34,8 +34,30 @@ jobs:
           CHROME_VERSION=$(google-chrome --version | awk '{ print $3 }' | cut -d'.' -f1-3)
           echo "Chrome version: $CHROME_VERSION"
           
-          # Determinar a versão mais recente do ChromeDriver compatível
-          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+          # Função para verificar se uma versão do ChromeDriver existe
+          check_chromedriver_version() {
+            curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$1" | grep -q "NoSuchKey"
+            return $?
+          }
+          
+          # Encontrar a versão compatível mais próxima do ChromeDriver
+          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f1)
+          MINOR_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f2)
+          PATCH_VERSION=$(echo $CHROME_VERSION | cut -d'.' -f3)
+          
+          while check_chromedriver_version "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}"; do
+            if [ $PATCH_VERSION -gt 0 ]; then
+              PATCH_VERSION=$((PATCH_VERSION-1))
+            elif [ $MINOR_VERSION -gt 0 ]; then
+              MINOR_VERSION=$((MINOR_VERSION-1))
+              PATCH_VERSION=99
+            else
+              echo "Não foi possível encontrar uma versão compatível do ChromeDriver"
+              exit 1
+            fi
+          done
+          
+          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
           echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
           
           # Baixar o ChromeDriver
@@ -61,7 +83,7 @@ jobs:
           sudo chmod +x /usr/local/bin/chromedriver
           
           # Verificar a instalação
-          chromedriver --version         
+          chromedriver --version       
 
       - name: Run scraping script
         env:
