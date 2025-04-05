@@ -331,19 +331,23 @@ def exibir_visao_integrada(apis):
         
 
     else:
-        # Garante que a coluna 'Estoque' seja numérica
-        df_filtrado['Estoque'] = pd.to_numeric(df_filtrado['Estoque'], errors='coerce')
-        
+        # Converte todas as colunas do tipo int64 para int padrão do Python
+        df_filtrado = df_filtrado.astype({col: 'int' for col in df_filtrado.select_dtypes(include=['int64']).columns}).set_index("SKU")
+
         # Ordena os dados por estoque em ordem decrescente
         df_filtrado = df_filtrado.sort_values(by='Estoque', ascending=False)
-        
-        # Define a formatação personalizada para a coluna 'Estoque'
+
+        # Garante que o valor máximo seja um int padrão do Python
+        max_estoque = int(df_filtrado['Estoque'].max())
+
         st.dataframe(
             df_filtrado,
             column_config={
-                "Estoque": st.column_config.NumberColumn(
+                "Estoque": st.column_config.ProgressColumn(
                     "Estoque",
-                    format="%d",  # Formato inteiro com separador de milhar
+                    format="%d",  # Usa %d para inteiros
+                    min_value=0,
+                    max_value=max_estoque
                 ),
             },
             use_container_width=True,
@@ -410,7 +414,7 @@ def exibir_gestao_estoque():
                         'Estoque': item.quantidade
                     })
                 
-                df_estoque_mercos = pd.DataFrame(dados)
+                df_estoque_mercos = pd.DataFrame(dados).set_index("SKU")
                 
                 if df_estoque_mercos.empty:
                     st.warning("Nenhum dado de estoque encontrado no banco de dados.")
@@ -418,18 +422,22 @@ def exibir_gestao_estoque():
                 
                 # Garante que a coluna 'Estoque' seja numérica
                 df_estoque_mercos['Estoque'] = pd.to_numeric(df_estoque_mercos['Estoque'], errors='coerce')
-                
+
                 # Ordena os dados por estoque em ordem decrescente
                 df_estoque_mercos = df_estoque_mercos.sort_values(by='Estoque', ascending=False)
                 
-                # Define a formatação personalizada para as colunas
+                # Garante que o valor máximo seja um int padrão do Python
+                max_estoque_mercos = int(df_estoque_mercos['Estoque'].max())
+
                 st.dataframe(
                     df_estoque_mercos,
                     column_config={
-                        "Estoque": st.column_config.NumberColumn(
+                        "Estoque": st.column_config.ProgressColumn(
                             "Estoque",
-                            format="%d",  # Formato inteiro com separador de milhar
-                        )
+                            format="%d",  # Usa %d para inteiros
+                            min_value=0,
+                            max_value=max_estoque_mercos
+                        ),
                     },
                     use_container_width=True,
                     height=600

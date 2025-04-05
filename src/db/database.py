@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 import logging
 import pandas as pd
 from datetime import datetime
-from .models import EstoqueMercos, ConciliacaoMercos, Estoque, Produto, Deposito
+from .models import EstoqueMercos, ConciliacaoMercos
 from sqlalchemy.sql import delete, select
 
 logger = logging.getLogger(__name__)
