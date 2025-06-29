@@ -139,7 +139,7 @@ class MercadoLivreAPI:
                 url,
                 headers=headers,
                 params=params,
-                timeout=15
+                timeout=60
             )
             logger.debug(f"Resposta bruta da API: {response.text}")  # Para debug
             response.raise_for_status()
@@ -324,12 +324,14 @@ class MercadoLivreAPI:
             start_utc4 = brt.localize(start_date_brt).astimezone(pytz.timezone('Etc/GMT+4')) - timedelta(hours=1)
             end_utc4 = brt.localize(end_date_brt).astimezone(pytz.timezone('Etc/GMT+4')) + timedelta(hours=23, minutes=59, seconds=59, microseconds=999999)            
 
+            print(f' Datas meli.py -> Início: {start_utc4} - Fim: {end_utc4}')
+
             url = "https://api.mercadolibre.com/orders/search"
             # Formate os parâmetros da API
             params = {
                 "seller": self.user_id,
                 "order.date_closed.from": start_utc4.isoformat(),
-                "order.date_closed.to": end_utc4.isoformat(),
+                "order.date_closed.to": end_utc4.isoformat(),                
                 #"order.status": "paid",
                 "limit": 50
             }
@@ -342,8 +344,8 @@ class MercadoLivreAPI:
                 all_orders.extend(results)
 
                 # Write the response results to a file
-                with open('api_response.txt', 'w', encoding='utf-8') as file:
-                    file.write(json.dumps(results, indent=2, ensure_ascii=False) + '\n')
+                #with open('api_response.txt', 'w', encoding='utf-8') as file:
+                #    file.write(json.dumps(results, indent=2, ensure_ascii=False) + '\n')
 
                 if len(results) < params['limit']:
                     break
@@ -394,17 +396,27 @@ class MercadoLivreAPI:
 
                             # verificar por que está lento
                             #logistic_type, logistic_cost = self.get_shipment_details(shipping_id)
-
-                            #logistic_type = "full"
-                            #logistic_cost = 0
+                            
 
                             order_status = order['status']
 
                             # com frete comprador
-                            paid_amount_calculated = (unit_price * qty) + logistic_cost
+                            paid_amount_calculated = paid_amount + logistic_cost #(unit_price * qty) + logistic_cost
 
-                            # sem frete comprador (default Mercado turbo)
-                            paid_amount_calculated_no_ship_cost = unit_price * qty
+                            # Cenários de reembolso parcial
+                            if order_status == 'partially_refunded':
+                                # com frete comprador
+                                paid_amount_calculated = paid_amount + logistic_cost 
+
+                                # sem frete comprador (default Mercado turbo)
+                                paid_amount_calculated_no_ship_cost = paid_amount
+                                                                
+                            else:    
+                                # com frete comprador
+                                paid_amount_calculated = (unit_price * qty) + logistic_cost
+
+                                # sem frete comprador (default Mercado turbo)
+                                paid_amount_calculated_no_ship_cost = unit_price * qty
 
                             sales_data.append({
                                 'order_id': order_id,
@@ -415,11 +427,14 @@ class MercadoLivreAPI:
                                 'sku': sku,
                                 'qty': qty,
                                 'unit_price': unit_price,
-                                'paid_amount_calculated': paid_amount_calculated,  
+                                'paid_amount': paid_amount,
                                 'paid_amount_calculated_no_ship_cost': paid_amount_calculated_no_ship_cost,   #default mercado turbo - sem frete comprador                            
+                                'paid_amount_calculated': paid_amount_calculated,                                  
                                 'logistic_cost': logistic_cost,
                                 'logistic_type': logistic_type,
                             })
+
+                            
 
                             qtd_total += qty
                             fat_total += paid_amount_calculated_no_ship_cost
@@ -434,13 +449,91 @@ class MercadoLivreAPI:
 
             logger.info(f"Total de registros de venda processados: {len(sales_data)}")            
             logger.info(f"Quantidade total unidades vendidas: {qtd_total}")
-            logger.info(f"Faturamento Total: {fat_total}")
+            logger.info(f"Faturamento Total: {fat_total}")                          
+
             return pd.DataFrame(sales_data)
 
         except Exception as e:
             logger.error(f"Erro ao obter dados de vendas: {str(e)}", exc_info=True)
             return pd.DataFrame()
-                  
+
+    def fetch_all_item_ids(self, seller_id: str, limit: int = 50) -> list:
+        """
+        Recupera todos os item_ids (anúncios) de um vendedor no Mercado Livre.
+        """
+        url = "https://api.mercadolibre.com/sites/MLB/search"
+        offset = 0
+        all_item_ids = []
+
+        while True:
+            params = {
+                "seller_id": seller_id,
+                "limit": limit,
+                "offset": offset
+            }
+            try:
+                response = self._make_request(url, params)
+                results = response.get("results", [])
+            except Exception as err:
+                logger.error(f"Erro na requisição: {err}")
+                break
+
+            if not results:
+                break
+
+            all_item_ids.extend([item.get("id") for item in results])
+
+            # Paginação
+            if len(results) < limit:
+                break
+            offset += limit
+
+        return all_item_ids
+    
+               
+    def get_all_questions_answers(self, item_id: str, limit: int = 50) -> list:
+        """
+        Recupera todas as perguntas e respostas de um anúncio no Mercado Livre.
+        """
+        url = "https://api.mercadolibre.com/questions/search"
+        offset = 0
+        all_entries = []
+
+        while True:
+            params = {
+                "api_version": "4",
+                "item": item_id,
+                "limit": limit,
+                "offset": offset
+            }
+            try:
+                response = self._make_request(url, params)                
+                questions = response.get("questions", [])
+            except Exception as err:
+                logger.error(f"Erro na requisição: {err}")
+                break
+
+            if not questions:
+                break
+
+            for q in questions:
+                entry = {
+                    "question_id": q.get("id"),
+                    "question_text": q.get("text"),
+                    "question_date": q.get("date_created"),
+                    "question_status": q.get("status"),
+                    "answer_text": q.get("answer", {}).get("text") if q.get("answer") else None,
+                    "answer_date": q.get("answer", {}).get("date_created") if q.get("answer") else None,
+                    "answer_status": q.get("answer", {}).get("status") if q.get("answer") else None
+                }
+                all_entries.append(entry)
+
+            # Paginação
+            if len(questions) < limit:
+                break
+            offset += limit
+
+        return all_entries
 
     def generate_general_report(self, start_date: str, end_date: str) -> str:
         df = self.get_sales_data(start_date, end_date)
@@ -449,6 +542,17 @@ class MercadoLivreAPI:
         
         # Truncar a data e formatar para DD/MM/YYYY
         #df['date'] = df['date'].dt.strftime('%d/%m/%Y')
+
+        '''
+        try: 
+            file_name = f"Relatorio_Modalidade_{start_date.replace('/', '_')}_{end_date.replace('/', '_')}.csv"
+            
+            df.to_csv(file_name, decimal=',')
+            print('CSV de vendas gerado com sucesso!')
+        except Exception as e:
+            logger.error(f"Erro ao gerar csv de vendas: {str(e)}", exc_info=True)
+        '''    
+
 
         #Agrupado por mês/ano
         df['date'] = df['date'].dt.strftime('%m/%Y')
@@ -463,7 +567,7 @@ class MercadoLivreAPI:
         }).reset_index()
         
         report = f"Relatório Geral\nPeríodo: {start_date} a {end_date}\n\n"
-        for _, row in df_grouped.sort_values(['date', 'sku']).iterrows():
+        for _, row in df_grouped.sort_values(['date', 'qty'], ascending=[False, False]).iterrows():
             report += f"{row['date']} - {row['sku']} - {row['qty']} unidades - R$ {row['paid_amount_calculated_no_ship_cost']:.2f}\n"
         
         # Calcular totais
@@ -479,6 +583,17 @@ class MercadoLivreAPI:
         report += f"Faturamento total: R$ {total_faturamento:.2f}\n"
         
         return report
+    
+    def generate_salesdash(self, start_date: str, end_date: str):
+        df = self.get_sales_data(start_date, end_date)
+
+        if df.empty:
+            return f"Nenhum dado de venda encontrado para o período de {start_date} a {end_date}."                
+                
+        df_vendas_aprovadas = df.query("order_status != 'cancelled'")                                        
+                       
+        return df_vendas_aprovadas
+
 
     def generate_modality_report(self, start_date: str, end_date: str) -> str:
         df = self.get_sales_data(start_date, end_date)
@@ -486,7 +601,8 @@ class MercadoLivreAPI:
             return f"Nenhum dado de venda encontrado para o período de {start_date} a {end_date}."
                         
         report = f"Relatório por Modalidade\nPeríodo: {start_date} a {end_date}\n\n"
-        for _, row in df.sort_values(['date', 'sku', 'logistic_type']).iterrows():
+
+        for _, row in df.sort_values(['date', 'qty'],ascending=[False, False]).iterrows():
             report += f"{row['date']} - {row['order_id']} - {row['sku']} - {row['product_name']} - {row['order_status']} - {row['payment_status']} - {row['qty']} unidades - R$ {row['unit_price']:.2f} - R$ {row['paid_amount_calculated_no_ship_cost']:.2f} - {row['logistic_cost']} - {row['logistic_type']}\n"
             #report += f"#{row['order_id']} \n"
         
@@ -560,9 +676,13 @@ if __name__ == "__main__":
     try:
         ml_api = MercadoLivreAPI()
         
-        # Exemplo de uso dos novos métodos
-        #start_date = "01/02/2025"
-        #end_date = "28/02/2025"
+        #Exemplo de uso dos novos métodos
+        start_date = "17/04/2025"
+        end_date = "17/04/2025"
+
+        #logger.info(f"Gerando relatório de vendas para o período de {start_date} a {end_date}")
+        #salesDf = ml_api.get_sales_data(start_date,end_date)
+        #salesDf.to_csv('meli_sales_data.csv')
 
 
         #logger.info(f"Gerando relatório geral para o período de {start_date} a {end_date}")
@@ -580,7 +700,7 @@ if __name__ == "__main__":
         #print(modality_report)        
 
                                  
-        #Estoque
+        #Estoque        
         df = ml_api.gerar_relatorio_estoque()        
         if not df.empty:
             print("\nRelatório de Estoque Mercado Livre")
@@ -588,6 +708,31 @@ if __name__ == "__main__":
             print(df.to_string(index=False))
         else:
             print("Nenhum dado encontrado.")
+
+
+        #Anúncios/ perguntas e Respostas
+        #products = ml_api._get_active_items()
+
+        #for product in products:
+                        
+        #    faqs = ml_api.get_all_questions_answers(product)
+        #    print(f"Total de questões recuperadas do anúncio {product}: {len(faqs)}")
+
+
+
+
+
+        #Perguntas
+        #item_id = "MLB5213093324"
+        #faqs = ml_api.get_all_questions_answers(item_id)
+
+        #for faq in faqs:
+        #    print(f"Pergunta: {faq['question_text']}")
+        #    print(f"Resposta: {faq['answer_text']}")
+        #    print("-" * 40)
+
+        #print(f"Total de interações recuperadas: {len(faqs)}")
+        
 
                     
     except MercadoLivreAPIError as e:
