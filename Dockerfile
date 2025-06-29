@@ -20,7 +20,7 @@ COPY . /app
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Expõe a porta padrão do Streamlit
-EXPOSE 8501
+EXPOSE 8080
 
 # Comando para rodar o Streamlit
-CMD ["streamlit", "run", "src/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run src/main.py --server.port=${PORT:-8080} --server.address=0.0.0.0"]
