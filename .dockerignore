@@ -10,3 +10,4 @@ __pycache__/
 .git
 .gitignore
 .vscode
+src/db/insert_user.py

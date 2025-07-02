@@ -24,3 +24,5 @@ dist/
 
 # Test cache
 .pytest_cache/
+
+src/db/insert_user.py

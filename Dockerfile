@@ -23,4 +23,4 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 EXPOSE 8080
 
 # Comando para rodar o Streamlit
-CMD ["sh", "-c", "streamlit run src/main.py --server.port=${PORT:-8080} --server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run login.py --server.port=${PORT:-8080} --server.address=0.0.0.0"]

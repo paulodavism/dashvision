@@ -207,9 +207,23 @@ def carregar_dados_completos(_apis):
 
 def exibir_visao_integrada(apis):
     """Dashboard principal com dados combinados"""
-    st.title("📊 Visão Integrada de Estoque")
-    st.caption(f"Última atualização: {datetime.now().strftime(DATE_FORMAT)}")
+    # Cabeçalho customizado com título grande, usuário e botão sair alinhados usando st.columns
+    col_titulo, col_aux, col_aux2, col_logout = st.columns([4, 3, 0.6, 0.4])
+    with col_titulo:
+        st.markdown('<div style="font-size:2.5rem;font-weight:700;line-height:1.1;">📊 Visão Integrada de Estoque</div>', unsafe_allow_html=True)
+        #st.title("📊 Visão Integrada de Estoque")
     
+    with col_logout:
+        if st.button('🔓 Sair', key='logout_btn', use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+    col_atualizacao, col_aux, col_aux2, col_user = st.columns([4, 3, 0.6, 0.4])        
+    with col_atualizacao:
+        st.caption(f"Última atualização: {datetime.now().strftime(DATE_FORMAT)}")
+    with col_user:
+        st.caption(f"Usuário: {st.session_state["name"]}")
+        #st.markdown(f'<span style="font-size:1rem;color:#444;">Usuário: <b>{st.session_state["name"]}</b></span>', unsafe_allow_html=True)    
+
     # Inicializa o estado da sessão para controlar o carregamento inicial dos dados
     if 'dados_carregados' not in st.session_state:
         st.session_state.dados_carregados = False
@@ -713,7 +727,6 @@ def exibir_gestao_estoque():
 
 def main():
     setup_environment()
-    
     # Menu principal
     with st.sidebar:
         st.header("📦 Menu Principal")
@@ -722,7 +735,6 @@ def main():
             ["Dashboard - Visão Integrada de Estoque", "Gestão Estoque Próprio"],
             index=0
         )
-                            
     # Controle de exibição
     if opcao == "Dashboard - Visão Integrada de Estoque":
         apis = {
